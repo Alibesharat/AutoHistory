@@ -7,7 +7,7 @@ namespace AutoHistory
     public static class ServiceExtention
     {
        
-        public static void AddAutoHisorty(this IServiceCollection services)
+        public static IServiceCollection AddAutoHisorty(this IServiceCollection services)
         {
 
             IHttpContextAccessor accessor;
@@ -19,7 +19,7 @@ namespace AutoHistory
 
             }
             DbContextExtention.SetHttpContextAccsor(accessor);
-
+            return services;
 
         }
 

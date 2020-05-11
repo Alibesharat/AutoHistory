@@ -27,6 +27,7 @@ namespace Sample
         {
             services.AddControllersWithViews();
             services.AddDbContext<MyContext>();
+           
             services.AddAutoHisorty();
                
         }
