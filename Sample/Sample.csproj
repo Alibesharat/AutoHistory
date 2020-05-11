@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>netcoreapp5.0</TargetFramework>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\AutoHistoryCore\AutoHistory.csproj" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="5.0.0-preview.3.20181.2" />
+
+	</ItemGroup>
+
+</Project>
