@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System;
 using System.Collections.Generic;
@@ -19,22 +20,26 @@ namespace AutoHistory
             _httpContextAccessor = accessor;
         }
 
-        static string ip = "Unknown"; 
-        static string os = "Unknown";
-        static string Browser = "Unknown";
-        static string Device = "Unknown";
 
-        protected  override void OnModelCreating(ModelBuilder modelBuilder)
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             foreach (var EntitiyType in modelBuilder.Model.GetEntityTypes())
             {
-                if (EntitiyType.ClrType.GetCustomAttributes(typeof(HistoryTrackableAttribute), true).Length > 0)
+                if (IsTrackable(EntitiyType.ClrType))
                 {
                     modelBuilder.Entity(EntitiyType.Name).Property<string>("Hs_Change");
-                    modelBuilder.Entity(EntitiyType.Name).Property<Boolean>("IsDelete");
+                    modelBuilder.Entity(EntitiyType.Name).Property<bool>("IsDelete");
                 }
             }
             base.OnModelCreating(modelBuilder);
+        }
+
+        private bool IsTrackable(Type entitiyType)
+        {
+            return entitiyType.GetCustomAttributes(typeof(HistoryTrackableAttribute), true).Length > 0;
+
+
         }
 
 
@@ -44,47 +49,43 @@ namespace AutoHistory
         /// </summary>
         /// <param name="db"></param>
         /// <returns></returns>
-        public  int SaveChangesWithHistory()
+        public int SaveChangesWithHistory()
         {
-            
+
             var entries = ChangeTracker.Entries().ToArray();
-            Filldata();
-            foreach (var entity in entries)
+            foreach (var entityEntry in entries)
             {
                 try
                 {
+                    var vm = Filldata(entityEntry.State);
 
-                    HistoryBaseModel model = (HistoryBaseModel)entity.Entity;
-                    HistoryViewModel vm = new HistoryViewModel()
-                    {
-                        AgentIp = ip,
-                        AgentOs = os,
-                        Device = Device,
-                        AgentBrowser = Browser,
-                        DateTime = DateTime.Now,
-                        State = entity.State.ToString()
-
-                    };
                     List<HistoryViewModel> data = new List<HistoryViewModel>();
-                    if (!string.IsNullOrWhiteSpace(model.Hs_Change))
+
+                    if (IsTrackable(entityEntry.Entity.GetType()))
                     {
-                        data = JsonSerializer.Deserialize<List<HistoryViewModel>>(model.Hs_Change);
+                        var propertyEntry = entityEntry.Property("Hs_CHange");
+                        if (!string.IsNullOrWhiteSpace(propertyEntry.CurrentValue.ToString()))
+                        {
+                            data = JsonSerializer.Deserialize<List<HistoryViewModel>>(propertyEntry.CurrentValue.ToString());
 
+                        }
+                        data.Add(vm);
+                        var JsonData = JsonSerializer.Serialize(data);
+                        propertyEntry.CurrentValue = JsonData;
+                        switch (entityEntry.State)
+                        {
+
+                            case EntityState.Deleted:
+                                entityEntry.Property("IsDelete").CurrentValue = true;
+                                entityEntry.State = EntityState.Modified;
+                                break;
+                            default:
+                                break;
+                        }
                     }
-                    data.Add(vm);
 
-                    var JSON = JsonSerializer.Serialize(data);
-                    switch (entity.State)
-                    {
 
-                        case EntityState.Deleted:
-                            model.IsDeleted = true;
-                            entity.State = EntityState.Modified;
-                            break;
-                        default:
-                            break;
-                    }
-                    model.Hs_Change = JSON;
+
                 }
                 catch
                 {
@@ -94,13 +95,24 @@ namespace AutoHistory
 
             }
 
-            return  base.SaveChanges();
+            return base.SaveChanges();
         }
 
 
 
-        private  void Filldata()
+        private HistoryViewModel Filldata(EntityState state)
         {
+            string Unknown = "Unknown";
+            HistoryViewModel vm = new HistoryViewModel()
+            {
+                AgentOs = Unknown,
+                AgentIp = Unknown,
+                Device = Unknown,
+                AgentBrowser = Unknown,
+                DateTime = DateTime.Now,
+                State = state.ToString()
+
+            };
             if (_httpContextAccessor != null)
             {
                 var httpContext = _httpContextAccessor.HttpContext;
@@ -109,18 +121,18 @@ namespace AutoHistory
                     string userAgent = httpContext.Request.Headers["User-Agent"];
                     var uaParser = Parser.GetDefault();
                     ClientInfo c = uaParser.Parse(userAgent);
-                    Device = c.Device.ToString();
-                    os = c.String;
-                    Browser = c.String;
+                    vm.Device = c.Device.ToString();
+                    vm.AgentOs = c.String;
+                    vm.AgentBrowser = c.String;
                     if (c.OS.ToString() != "Other")
                     {
-                        os = c.OS.ToString();
+                        vm.AgentOs = c.OS.ToString();
                     }
 
-                    ip = httpContext.Connection.RemoteIpAddress.ToString();
-                    if (ip == "::1" || ip == "127.0.0.1")
+                    vm.AgentIp = httpContext.Connection.RemoteIpAddress.ToString();
+                    if (vm.AgentIp == "::1" || vm.AgentIp == "127.0.0.1")
                     {
-                        ip = Dns.GetHostEntry(Dns.GetHostName())
+                        vm.AgentIp = Dns.GetHostEntry(Dns.GetHostName())
                             .AddressList
                             .FirstOrDefault(C => C.AddressFamily ==
                             System.Net.Sockets.AddressFamily.InterNetwork).ToString();
@@ -132,6 +144,8 @@ namespace AutoHistory
                     ;
                 }
             }
+
+            return vm;
         }
 
     }
