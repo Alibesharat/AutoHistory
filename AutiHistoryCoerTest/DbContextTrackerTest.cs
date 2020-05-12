@@ -8,7 +8,7 @@ namespace AutoHistoryCoerTest
 {
     public class DbContextTrackerTest : DbContext
     {
-       
+        
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseInMemoryDatabase(databaseName: "DbContextTrackerTest");

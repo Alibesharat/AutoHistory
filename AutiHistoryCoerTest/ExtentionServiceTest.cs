@@ -15,14 +15,14 @@ namespace AutoHistoryCoerTest
             optionsBuilder.UseInMemoryDatabase(databaseName: "testdb");
             base.OnConfiguring(optionsBuilder);
 
-
         }
 
         public DbSet<Student> Students { get; set; }
     }
 
 
-    public class Student : HistoryBaseModel
+    [HistoryTrackable]
+    public class Student
     {
         [Key]
         public int Id { get; set; }
@@ -41,7 +41,7 @@ namespace AutoHistoryCoerTest
             _testOutputHelper = testOutputHelper;
         }
 
-        //[Fact]
+        [Fact]
         public void Write_Read_data()
         {
             testdb db = new testdb();

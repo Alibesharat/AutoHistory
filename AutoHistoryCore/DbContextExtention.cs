@@ -40,65 +40,7 @@ namespace AutoHistory
 
 
 
-        /// <summary>
-        /// Save Change with SoftDelete Pattern(Logical Delete)
-        /// Save Agent info -- OS,Broswer and IpAddress
-        /// </summary>
-        /// <param name="db"></param>
-        /// <returns></returns>
-        public static int SaveChangesWithHistory(this DbContext db)
-        {
-
-            var entries = db.ChangeTracker.Entries().ToArray();
-            Filldata();
-            foreach (var entity in entries)
-            {
-                try
-                {
-
-                    HistoryBaseModel model = (HistoryBaseModel)entity.Entity;
-                    HistoryViewModel vm = new HistoryViewModel()
-                    {
-                        AgentIp = ip,
-                        AgentOs = os,
-                        Device = Device,
-                        AgentBrowser = Browser,
-                        DateTime = DateTime.Now,
-                        State = entity.State.ToString()
-
-                    };
-                    List<HistoryViewModel> data = new List<HistoryViewModel>();
-                    if (!string.IsNullOrWhiteSpace(model.Hs_Change))
-                    {
-                        data = JsonSerializer.Deserialize<List<HistoryViewModel>>(model.Hs_Change);
-
-                    }
-                    data.Add(vm);
-
-                    var JSON = JsonSerializer.Serialize(data);
-                    switch (entity.State)
-                    {
-
-                        case EntityState.Deleted:
-                            model.IsDeleted = true;
-                            entity.State = EntityState.Modified;
-                            break;
-                        default:
-                            break;
-                    }
-                    model.Hs_Change = JSON;
-                }
-                catch
-                {
-
-                    ;
-                }
-
-            }
-
-            return db.SaveChanges();
-        }
-
+     
 
         private static void Filldata()
         {
